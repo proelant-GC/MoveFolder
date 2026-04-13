@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body { font-family: 'Open Sans', Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
+      .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 0; border: 1px solid #ddd; }
+      .header { text-align: center; padding: 25px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; }
+      .content { padding: 30px; }
+      
+      /* Dynamic Colors */
+      .status-card { 
+        padding: 20px; 
+        border-radius: 4px;
+        border-left: 6px solid <?= statusColor ?>; 
+        background-color: #fcfcfc;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      }
+      
+      .status-title { margin-top: 0; color: <?= statusColor ?>; }
+      .error-box { background-color: #ffebee; color: #c62828; padding: 10px; border-radius: 4px; margin-top: 15px; font-weight: bold; font-size: 13px; }
+      
+      h3 { color: #333; margin-top: 25px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+      
+      table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+      td { padding: 12px 10px; border-bottom: 1px solid #f0f0f0; }
+      .label { font-weight: bold; color: #555; width: 30%; }
+      .value { color: #333; }
+      .section-header { background-color: #f4f6f2; color: #7da618; font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+      
+      .footer { margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; text-align: center; color: #999; font-size: 12px; }
+      .helpdesk-link { color: #d32f2f; text-decoration: underline; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <!-- LOGO UPDATE: Converted view link to direct UC (UserContent) link for email rendering -->
+        <img src="https://drive.google.com/uc?export=view&id=1_hcf8w22d5w886L9rgdKyK52XQGnB_P0" 
+             alt="Natuurpunt" 
+             width="220" 
+             style="display: block; margin: 0 auto; border: 0; outline: none; text-decoration: none;">
+      </div>
+
+      <div class="content">
+        <!-- STATUS CARD -->
+        <div class="status-card">
+          <h2 class="status-title"><?= statusTitle ?></h2>
+          <p style="color: #555; line-height: 1.5;">
+            <?= statusMessage ?>
+          </p>
+          
+          <? if (errorMsg) { ?>
+            <div class="error-box">Foutmelding: <?= errorMsg ?></div>
+          <? } ?>
+        </div>
+
+        <!-- DETAILS -->
+        <h3>Details van aanvraag</h3>
+        <table>
+          <tr>
+            <td class="label">Referentie</td>
+            <td class="value" style="font-family: monospace; font-weight: bold; color: #94c11f;"><?= requestId ?></td>
+          </tr>
+          <tr>
+            <td class="label">Actie Type</td>
+            <td class="value"><?= isCopy ? "Kopiëren" : "Verplaatsen" ?></td>
+          </tr>
+          
+          <!-- SOURCE -->
+          <tr><td colspan="2" class="section-header" style="padding-top:20px;">📂 Bron (Oorsprong)</td></tr>
+          <tr>
+            <td class="label">Mapnaam</td>
+            <td class="value"><?= source.name ?></td>
+          </tr>
+          <tr>
+            <td class="label">Locatie/Drive</td>
+            <td class="value"><?= source.drive ?></td>
+          </tr>
+           <tr>
+            <td class="label">Map ID</td>
+            <td class="value" style="font-family: monospace; color: #777;"><?= source.id ?></td>
+          </tr>
+
+          <!-- TARGET -->
+          <tr><td colspan="2" class="section-header" style="padding-top:20px;">🎯 Doel (Bestemming)</td></tr>
+          <tr>
+            <td class="label">Drive Naam</td>
+            <td class="value"><?= target.name ?></td>
+          </tr>
+          <tr>
+            <td class="label">Drive ID</td>
+            <td class="value" style="font-family: monospace; color: #777;"><?= target.id ?></td>
+          </tr>
+        </table>
+
+        <div class="footer">
+          <p>Dit is een automatisch bericht van de <strong>Natuurpunt Drive Tool</strong>.<br>
+          Bij vragen, vermeld aub referentie <strong><?= requestId ?></strong>.</p>
+          
+          <!-- CONDITIONAL HELPDESK LINK FOR FAILURES -->
+          <? if (typeof success !== 'undefined' && !success) { ?>
+            <p style="margin-top: 15px;">
+              <a href="https://sites.google.com/natuurpunt.be/personeelssite/apps-websites/helpdesk-it-facility?authuser=0" 
+                 target="_blank" 
+                 class="helpdesk-link">
+                 Maak een ticket aan bij de IT Helpdesk
+              </a>
+            </p>
+          <? } ?>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --np-green: #94c11f;
+      }
+      body { 
+        height: 100vh; 
+        background-color: #f4f6f2; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        font-family: 'Open Sans', sans-serif;
+      }
+      .card {
+        max-width: 500px;
+        border: none;
+        border-top: 6px solid var(--np-green);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+      }
+      .logo {
+        height: 50px;
+        margin-bottom: 30px;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+      }
+      h1 { font-weight: 700; color: #d32f2f; font-size: 1.8rem; margin-bottom: 15px; }
+      p { color: #555; font-size: 1.1rem; }
+      .btn-primary {
+        background-color: var(--np-green);
+        border-color: var(--np-green);
+        font-weight: 600;
+        margin-top: 20px;
+      }
+      .btn-primary:hover {
+        background-color: #7da618;
+        border-color: #7da618;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <!-- Logo Update: Terug naar stabiele Wikimedia link om gebroken afbeelding te voorkomen -->
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Natuurpunt_logo.svg/320px-Natuurpunt_logo.svg.png" alt="Natuurpunt" class="logo">
+      
+      <h1>Toegang Geweigerd</h1>
+      <p>U heeft geen toestemming om de <strong>Map Overdracht Tool</strong> te gebruiken.</p>
+      
+      <hr style="margin: 20px 0; opacity: 0.1;">
+      
+      <p style="font-size: 0.95rem; color: #777;">
+        Staat u niet op de lijst van geautoriseerde gebruikers? Neem contact op met de <strong>IT Servicedesk</strong>.
+      </p>
+
+      <a href="https://www.natuurpunt.be" target="_top" class="btn btn-primary">Terug naar Natuurpunt.be</a>
+    </div>
+  </body>
+</html>
