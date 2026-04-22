@@ -30,19 +30,14 @@ function getUserCopyPermission() {
   
   if (!sheet || sheet.getLastRow() === 0) return false;
 
-  // Get Emails (Col A) and Permissions (Col B)
   const data = sheet.getRange("A:B").getValues();
-  
-  // Find the row for the current user
   const userRow = data.find(row => row[0].toString().toLowerCase() === userEmail.toLowerCase());
   
   if (userRow) {
     const permission = userRow[1];
-    // Check for boolean true or string "TRUE" (case insensitive)
     return permission === true || permission.toString().toUpperCase() === 'TRUE';
   }
-  
-  return false; // Default to false
+  return false;
 }
 
 function createHtmlOutput(filename) {
@@ -59,15 +54,12 @@ function include(filename) {
 
 /**
  * FETCH DRIVES: Returns list of Shared Drives where user is Manager or Content Manager.
- * Filtered to exclude drives with only Contributor/Reader access.
  */
 function getAuthorizedSharedDrives() {
   let drives = [];
   let pageToken = null;
   try {
     do {
-      // Drive API v3: List Drives
-      // fields: needed to explicitly request capabilities if not returned by default in some contexts
       const response = Drive.Drives.list({
         pageToken: pageToken,
         pageSize: 100,
@@ -78,11 +70,6 @@ function getAuthorizedSharedDrives() {
       if (response.drives) {
         response.drives.forEach(drive => {
           const caps = drive.capabilities;
-          
-          // FILTER: Check permissions
-          // We need Content Manager (canTrashChildren) or Manager (canDeleteChildren + canManageMembers)
-          // Contributors (canAddChildren only) are excluded.
-          
           if (caps.canAddChildren && (caps.canDeleteChildren || caps.canTrashChildren)) {
              drives.push({ id: drive.id, name: drive.name });
           }
@@ -91,26 +78,15 @@ function getAuthorizedSharedDrives() {
       pageToken = response.nextPageToken;
     } while (pageToken);
   } catch (e) {
-    console.error("Error fetching drives: " + e.message);
     throw new Error("Kon Shared Drives niet laden: " + e.message);
   }
   return drives.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/**
- * VALIDATION: Checks Manager/Content Manager rights on a specific Drive ID.
- * Fixed to allow Content Managers (who can Trash but often not Delete Permanently)
- */
 function validateDestinationPermissions(driveId) {
   try {
     const drive = Drive.Drives.get(driveId, { fields: "id, name, capabilities" });
     const caps = drive.capabilities;
-    
-    // Logic Update:
-    // - canAddChildren: Required to create folders/files.
-    // - canDeleteChildren: Often False for Content Managers (permanent delete restricted).
-    // - canTrashChildren: True for Content Managers (move to bin).
-    
     const hasSufficientRights = caps.canAddChildren && (caps.canDeleteChildren || caps.canTrashChildren);
 
     if (!hasSufficientRights) {
@@ -124,17 +100,15 @@ function validateDestinationPermissions(driveId) {
 
 /**
  * API: Submit Request
+ * Ontvangt nu ook de sourceDriveName om in de eerste email te tonen.
  */
-function submitMoveRequest(sourceId, targetDriveId, sourceName, targetName, isCopy) {
+function submitMoveRequest(sourceId, targetId, sourceName, targetName, isCopy, sourceDriveName) {
   const userEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.openById(CONFIG.MASTER_SHEET_ID);
   
-  // --- SECURITY CHECK: ENFORCE COPY PERMISSIONS ---
   if (isCopy) {
     const canCopy = getUserCopyPermission();
-    if (!canCopy) {
-      isCopy = false; // Downgrade to MOVE if unauthorized
-    }
+    if (!canCopy) isCopy = false; 
   }
 
   let sheet = ss.getSheetByName(CONFIG.LOG_STR);
@@ -143,10 +117,9 @@ function submitMoveRequest(sourceId, targetDriveId, sourceName, targetName, isCo
     sheet.appendRow(['Timestamp', 'User', 'Action', 'SourceID', 'TargetID', 'Status', 'Details', 'Info', 'RequestID']);
   }
   
-  if (!sourceId || !targetDriveId) throw new Error("Ongeldige parameters.");
+  if (!sourceId || !targetId) throw new Error("Ongeldige parameters.");
 
   const actionName = isCopy ? 'Mapkopie' : 'Mapoverdracht';
-  
   const now = new Date();
   const dateStr = Utilities.formatDate(now, 'GMT+1', 'yyyyMMdd');
   const uniqueId = 'REQ-' + dateStr + '-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
@@ -156,15 +129,15 @@ function submitMoveRequest(sourceId, targetDriveId, sourceName, targetName, isCo
     userEmail,
     actionName,
     sourceId,
-    targetDriveId,
+    targetId,
     STATUS.PENDING,
-    `Bron: ${sourceName} -> Doel: ${targetName}`,
+    `Bron: ${sourceName} (${sourceDriveName}) -> Doel: ${targetName}`,
     "", 
     uniqueId 
   ]);
 
   try {
-    sendAckEmail(userEmail, uniqueId, sourceName, targetName, isCopy);
+    sendAckEmail(userEmail, uniqueId, sourceName, targetName, isCopy, sourceDriveName);
   } catch (e) {
     console.warn("Failed to send ack email: " + e.message);
   }
@@ -176,10 +149,7 @@ function submitMoveRequest(sourceId, targetDriveId, sourceName, targetName, isCo
   };
 }
 
-/**
- * Sends the "Request Received" email immediately using the shared template.
- */
-function sendAckEmail(to, requestId, sourceName, targetName, isCopy) {
+function sendAckEmail(to, requestId, sourceName, targetName, isCopy, sourceDriveName) {
   const actionText = isCopy ? "Kopieeractie" : "Mapoverdracht";
   const subject = `Verzoek Ontvangen: ${actionText} (${requestId})`;
 
@@ -193,7 +163,8 @@ function sendAckEmail(to, requestId, sourceName, targetName, isCopy) {
   template.isCopy = isCopy;
   template.requestId = requestId;
   
-  template.source = { name: sourceName, id: "Zie detail bij verwerking", drive: "Bron" };
+  // Update Source: We gebruiken nu de correcte drive naam in plaats van 'Bron'
+  template.source = { name: sourceName, id: "Zie detail bij verwerking", drive: sourceDriveName || "Onbekend" };
   template.target = { name: targetName, id: "Zie detail bij verwerking" };
 
   MailApp.sendEmail({
@@ -203,7 +174,6 @@ function sendAckEmail(to, requestId, sourceName, targetName, isCopy) {
   });
 }
 
-// Helpers
 function getOAuthToken() { return ScriptApp.getOAuthToken(); }
 function getApiKey() { return CONFIG.API_KEY; }
 function getProjectNumber() { return CONFIG.PROJECT_NUMBER; }

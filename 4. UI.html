@@ -93,7 +93,6 @@
   <body>
     <div class="container">
       
-      <!-- Logo Header - Aangepast naar stabiele Wikimedia link -->
       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Natuurpunt_logo.svg/320px-Natuurpunt_logo.svg.png" alt="Natuurpunt" class="logo">
       
       <h2 class="header-title">Map Overdracht Tool</h2>
@@ -101,16 +100,13 @@
 
       <form id="transferForm">
         
-        <!-- SOURCE SECTION -->
         <div class="mb-5">
           <label class="step-label">1. Bron (Waar staat de map?)</label>
           
-          <!-- New Source Drive Dropdown -->
           <select class="form-select form-select-lg mb-2" id="sourceDriveSelect" onchange="resetSourceSelection()">
              <option value="" selected>-- Laden van Drives... --</option>
           </select>
 
-          <!-- Source Folder Picker -->
           <div class="input-group">
             <input type="text" class="form-control" id="sourceFolderName" placeholder="Kies eerst een drive hierboven" readonly style="background-color: #fafafa;">
             <input type="hidden" id="sourceFolderId">
@@ -118,16 +114,22 @@
           </div>
         </div>
 
-        <!-- DESTINATION SECTION -->
         <div class="mb-4">
-          <label class="step-label">2. Doel (Naar welke Shared Drive?)</label>
-          <select class="form-select form-select-lg" id="targetDrive" disabled onchange="validateDestination()">
+          <label class="step-label">2. Doel (Naar welke Shared Drive of map?)</label>
+          <select class="form-select form-select-lg mb-2" id="targetDrive" disabled onchange="validateDestination()">
             <option value="" selected>-- Laden van Drives... --</option>
           </select>
-          <div class="form-text mt-2" id="destHelp">Selecteer de Shared Drive waar de map naartoe moet. Uw rechten worden gecontroleerd.</div>
+          
+          <div class="input-group">
+            <input type="text" class="form-control" id="targetFolderName" placeholder="Optioneel: kies een submap (of laat leeg voor hoofdmap)" readonly style="background-color: #fafafa;">
+            <input type="hidden" id="targetFolderId">
+            <button class="btn btn-outline-secondary" type="button" id="btnPickTarget" onclick="loadTargetPicker()" disabled>Submap Kiezen</button>
+            <button class="btn btn-outline-danger" type="button" onclick="clearTargetFolder()">✖</button>
+          </div>
+          
+          <div class="form-text mt-2" id="destHelp">Selecteer de Shared Drive. U kunt optioneel een specifieke submap kiezen.</div>
         </div>
         
-        <!-- ACTION TYPE -->
         <div class="mb-4 p-3 bg-light rounded border">
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="copyCheckbox">
@@ -138,7 +140,6 @@
           <div class="form-text ms-1" id="copyHelpText">
             Indien aangevinkt, blijven de bestanden ook in de bronmap staan.
           </div>
-          <!-- PERMISSION WARNING (Hidden by default) -->
           <div id="copyWarning" class="mt-2 text-danger fw-bold" style="display:none; font-size: 0.9em;">
             ⚠️ Onvoldoende rechten om kopieerfunctie te gebruiken
           </div>

@@ -6,7 +6,6 @@
   let myDriveAllowed = true;
 
   window.onload = function() {
-    // 1. Fetch Config First
     google.script.run.withSuccessHandler(val => {
        myDriveAllowed = val;
        google.script.run
@@ -15,16 +14,13 @@
         .getAuthorizedSharedDrives();
     }).getMyDriveAllowed();
 
-    // 2. Fetch Copy Permissions (New)
     google.script.run.withSuccessHandler(applyCopyPermissions).getUserCopyPermission();
 
-    // 3. Init Keys
     google.script.run.withSuccessHandler(k => developerKey = k).getApiKey();
     google.script.run.withSuccessHandler(n => projectNumber = String(n)).getProjectNumber();
     google.script.run.withSuccessHandler(t => oauthToken = t).getOAuthToken();
   };
 
-  // --- PERMISSION UI LOGIC ---
   function applyCopyPermissions(canCopy) {
     const checkbox = document.getElementById('copyCheckbox');
     const warning = document.getElementById('copyWarning');
@@ -42,7 +38,6 @@
     }
   }
 
-  // --- POPULATE BOTH DROPDOWNS ---
   function populateDrives(drives) {
     const sourceSelect = document.getElementById('sourceDriveSelect');
     const targetSelect = document.getElementById('targetDrive');
@@ -77,7 +72,6 @@
     targetSelect.disabled = false;
   }
 
-  // --- UI LOGIC ---
   function resetSourceSelection() {
     document.getElementById('sourceFolderId').value = "";
     document.getElementById('sourceFolderName').value = "";
@@ -97,8 +91,11 @@
 
   function validateDestination() {
     const driveId = document.getElementById('targetDrive').value;
+    const btnTarget = document.getElementById('btnPickTarget');
+
     if (!driveId) {
       document.getElementById('destHelp').innerHTML = "Selecteer een drive.";
+      btnTarget.disabled = true;
       validateForm();
       return;
     }
@@ -110,16 +107,17 @@
       .withSuccessHandler(function(result) {
         if (result.valid) {
           document.getElementById('destHelp').innerHTML = "<span style='color:green'>✔ Rechten OK (" + result.name + ")</span>";
+          btnTarget.disabled = false; 
           validateForm();
         } else {
           document.getElementById('destHelp').innerHTML = "<span style='color:red'>⛔ " + result.error + "</span>";
           document.getElementById('targetDrive').value = ""; 
+          btnTarget.disabled = true;
         }
       })
       .validateDestinationPermissions(driveId);
   }
 
-  // --- PICKER LOGIC ---
   function onApiLoad() {
     gapi.load('picker', { 'callback': function() { pickerApiLoaded = true; } });
   }
@@ -136,14 +134,35 @@
     
     const parentId = document.getElementById('sourceDriveSelect').value;
     if (!parentId) {
-      alert("Selecteer eerst een Drive uit de lijst.");
+      alert("Selecteer eerst een Bron Drive uit de lijst.");
       return;
     }
     
-    createPicker(parentId);
+    createPicker(parentId, 'SOURCE');
   }
 
-  function createPicker(parentId) {
+  function loadTargetPicker() {
+    if (!pickerApiLoaded || !oauthToken || !developerKey || !projectNumber) {
+      alert("System Initializing... Wait 1 second and try again.");
+      return;
+    }
+
+    const driveId = document.getElementById('targetDrive').value;
+    if (!driveId) {
+      alert("Selecteer eerst een Doel Drive uit de lijst.");
+      return;
+    }
+
+    createPicker(driveId, 'TARGET');
+  }
+
+  function clearTargetFolder() {
+    document.getElementById('targetFolderId').value = "";
+    document.getElementById('targetFolderName').value = "";
+    validateForm();
+  }
+
+  function createPicker(parentId, mode) {
     const origin = 'https://script.google.com';
     
     const view = new google.picker.DocsView()
@@ -158,28 +177,31 @@
     }
 
     const picker = new google.picker.PickerBuilder()
-      .setTitle("Selecteer Map")
+      .setTitle(mode === 'SOURCE' ? "Selecteer Bronmap" : "Selecteer Doelmap")
       .addView(view)
       .setOAuthToken(oauthToken)
       .setDeveloperKey(developerKey)
       .setAppId(projectNumber)
       .setOrigin(origin)
-      .setCallback(pickerCallback)
+      .setCallback((data) => {
+        if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
+          const doc = data[google.picker.Response.DOCUMENTS][0];
+          if (mode === 'SOURCE') {
+            document.getElementById('sourceFolderId').value = doc[google.picker.Document.ID];
+            document.getElementById('sourceFolderName').value = doc[google.picker.Document.NAME];
+          } else {
+            document.getElementById('targetFolderId').value = doc[google.picker.Document.ID];
+            document.getElementById('targetFolderName').value = doc[google.picker.Document.NAME];
+          }
+          validateForm();
+        }
+      })
       .setSize(750, 500)
       .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
       .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
       .build();
       
     picker.setVisible(true);
-  }
-
-  function pickerCallback(data) {
-    if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
-      const doc = data[google.picker.Response.DOCUMENTS][0];
-      document.getElementById('sourceFolderId').value = doc[google.picker.Document.ID];
-      document.getElementById('sourceFolderName').value = doc[google.picker.Document.NAME];
-      validateForm();
-    }
   }
 
   function validateForm() {
@@ -207,9 +229,23 @@
     
     const sId = document.getElementById('sourceFolderId').value;
     const sName = document.getElementById('sourceFolderName').value;
-    const tId = document.getElementById('targetDrive').value;
-    const tName = document.getElementById('targetDrive').options[document.getElementById('targetDrive').selectedIndex].text;
+    
+    // Zorg ervoor dat de drive namen opgeschoond worden van emoji's
+    const sDriveNameRaw = document.getElementById('sourceDriveSelect').options[document.getElementById('sourceDriveSelect').selectedIndex].text;
+    const sDriveName = sDriveNameRaw.replace(/^[📂👥]\s*/, '').trim();
+
+    const tDriveId = document.getElementById('targetDrive').value;
+    const tSubFolderId = document.getElementById('targetFolderId').value;
+    
+    const tDriveNameRaw = document.getElementById('targetDrive').options[document.getElementById('targetDrive').selectedIndex].text;
+    const tDriveName = tDriveNameRaw.replace(/^[📂👥]\s*/, '').trim();
+    const tSubFolderName = document.getElementById('targetFolderName').value;
+    
     const isCopy = document.getElementById('copyCheckbox').checked;
+
+    // Construeer het uiteindelijke ID en de string volgens de regel <SharedDriveName> naar <Foldername>
+    const finalTargetId = tSubFolderId || tDriveId;
+    const finalTargetName = tSubFolderName ? `${tDriveName} naar ${tSubFolderName}` : `${tDriveName} naar /`;
     
     google.script.run
       .withSuccessHandler(r => {
@@ -233,6 +269,6 @@
          document.getElementById('transferForm').style.display = 'block';
          alert("Fout: " + e.message);
       })
-      .submitMoveRequest(sId, tId, sName, tName, isCopy);
+      .submitMoveRequest(sId, finalTargetId, sName, finalTargetName, isCopy, sDriveName);
   }
 </script>
